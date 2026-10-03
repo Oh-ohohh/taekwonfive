@@ -3,21 +3,29 @@ import type { Student } from "@/types/student";
 /**
  * Domain types for daily attendance tracking.
  *
- * These types mirror the shape of the future Supabase `attendance_records`
- * table. Keep them in sync with the table schema when the database is
- * connected.
+ * These mirror the Supabase `attendance_records` table. A student with no
+ * row for a given `attendance_date` is treated as "not_checked" — that
+ * status never exists as a stored row (see the table's status check
+ * constraint), only as the view-model's default for an absent record.
  */
 
 export type AttendanceStatus = "not_checked" | "present" | "late" | "absent";
 
+/** The subset of `AttendanceStatus` that can actually be persisted. */
+export type StoredAttendanceStatus = Exclude<AttendanceStatus, "not_checked">;
+
+export type ClassSession = 1 | 2 | 3 | 4 | 5 | 6;
+
 export type AttendanceRecord = {
   id: string;
   studentId: string;
-  /** ISO date string, e.g. "2026-09-03" */
+  /** "YYYY-MM-DD", Korea (Asia/Seoul) calendar date */
   date: string;
-  status: AttendanceStatus;
-  /** ISO datetime string set when status becomes "present" or "late" */
+  status: StoredAttendanceStatus;
+  /** ISO datetime string set when status is "present" or "late" */
   checkedAt: string | null;
+  classSession: ClassSession | null;
+  note: string | null;
 };
 
 /**
@@ -29,6 +37,20 @@ export type AttendanceEntry = {
   student: Student;
   status: AttendanceStatus;
   checkedAt: string | null;
+  classSession: ClassSession | null;
+  /** True while a status change for this student is being saved. */
+  pending?: boolean;
+};
+
+/** Aggregate stats + recent activity for today (Asia/Seoul), used by the dashboard. */
+export type TodayAttendanceSummary = {
+  totalStudents: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  notCheckedCount: number;
+  attendanceRate: number;
+  recentRecords: AttendanceRecord[];
 };
 
 export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {

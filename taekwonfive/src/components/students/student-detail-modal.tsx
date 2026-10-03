@@ -3,7 +3,9 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import type { Student } from "@/types/student";
-import { formatDateDots } from "@/lib/date";
+import { formatBeltLabel } from "@/types/student";
+import { formatDateDots, formatDateTimeDots } from "@/lib/date";
+import { formatAttendanceDays } from "@/lib/student-schedule";
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -29,27 +31,19 @@ export function StudentDetailModal({
     <Modal open={student !== null} onClose={onClose} title="학생 상세정보">
       {student && (
         <div className="flex flex-col gap-1">
-          <div className="mb-2 flex items-center justify-between">
-            <div>
-              <p className="text-lg font-bold text-slate-900">{student.name}</p>
-              <p className="text-xs text-slate-400">{student.classGroup} · {student.belt}</p>
-            </div>
-            {!student.active && (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                휴회중
-              </span>
-            )}
+          <div className="mb-2">
+            <p className="text-lg font-bold text-slate-900">{student.name}</p>
+            <p className="text-xs text-slate-400">{formatBeltLabel(student.grade, student.poom)}</p>
           </div>
 
           <div className="divide-y divide-slate-100">
-            <Row label="생년월일" value={formatDateDots(student.birthDate)} />
-            <Row label="학교 / 학년" value={`${student.school} · ${student.grade}`} />
-            <Row label="성별" value={student.gender} />
-            <Row label="띠 / 품·단" value={student.belt} />
-            <Row label="수업부" value={student.classGroup} />
-            <Row label="보호자" value={student.guardianName} />
-            <Row label="보호자 연락처" value={student.guardianPhone} />
-            <Row label="등록일" value={formatDateDots(student.registrationDate)} />
+            <Row label="생년월일" value={student.birthDate ? formatDateDots(student.birthDate) : "-"} />
+            <Row label="학교" value={student.school ?? "-"} />
+            <Row label="성별" value={student.gender ?? "-"} />
+            <Row label="급/품" value={formatBeltLabel(student.grade, student.poom)} />
+            <Row label="출석 요일" value={formatAttendanceDays(student.attendanceDays)} />
+            <Row label="보호자" value={student.guardianName ?? "-"} />
+            <Row label="등록일" value={formatDateTimeDots(student.createdAt)} />
           </div>
 
           {student.notes && (

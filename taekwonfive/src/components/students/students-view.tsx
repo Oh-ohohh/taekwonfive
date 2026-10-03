@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useStudents } from "@/context/students-context";
 import { useToast } from "@/components/ui/toast-provider";
+import { StudentHasAttendanceError } from "@/services/student-service";
 import { StudentsToolbar } from "@/components/students/students-toolbar";
 import { StudentsTable } from "@/components/students/students-table";
 import { StudentCardList } from "@/components/students/student-card-list";
@@ -10,7 +11,8 @@ import { StudentFormModal } from "@/components/students/student-form-modal";
 import { StudentDetailModal } from "@/components/students/student-detail-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/data-states";
-import type { ClassGroup, Student, StudentInput } from "@/types/student";
+import type { Student, StudentInput } from "@/types/student";
+import { PageHeading } from "@/components/layout/page-heading";
 
 type FormModalState = { mode: "create" } | { mode: "edit"; student: Student } | null;
 
@@ -19,7 +21,6 @@ export function StudentsView() {
   const { notify } = useToast();
 
   const [search, setSearch] = useState("");
-  const [classGroupFilter, setClassGroupFilter] = useState<"all" | ClassGroup>("all");
   const [formModal, setFormModal] = useState<FormModalState>(null);
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
@@ -27,12 +28,9 @@ export function StudentsView() {
 
   const filteredStudents = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    return students.filter((student) => {
-      const matchesKeyword = keyword === "" || student.name.toLowerCase().includes(keyword);
-      const matchesClassGroup = classGroupFilter === "all" || student.classGroup === classGroupFilter;
-      return matchesKeyword && matchesClassGroup;
-    });
-  }, [students, search, classGroupFilter]);
+    if (keyword === "") return students;
+    return students.filter((student) => student.name.toLowerCase().includes(keyword));
+  }, [students, search]);
 
   async function handleFormSubmit(input: StudentInput) {
     setSubmitting(true);
@@ -57,27 +55,21 @@ export function StudentsView() {
     const target = deleteTarget;
     setDeleteTarget(null);
     setDetailStudent(null);
-    const ok = await removeStudent(target.id);
-    notify(
-      ok ? `${target.name} 학생이 삭제되었습니다.` : "삭제 중 오류가 발생했습니다.",
-      ok ? "success" : "error"
-    );
+    try {
+      await removeStudent(target.id);
+      notify(`${target.name} 학생이 삭제되었습니다.`);
+    } catch (err) {
+      const message =
+        err instanceof StudentHasAttendanceError ? err.message : "삭제 중 오류가 발생했습니다.";
+      notify(message, "error");
+    }
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">학생관리</h1>
-        <p className="mt-0.5 text-sm text-slate-500">등록된 학생 정보를 조회하고 관리합니다.</p>
-      </div>
+      <PageHeading eyebrow="GROWING TOGETHER" title="수련생 관리" description="함께 땀 흘리고 성장하는 우리 도장의 수련생들입니다." action={!loading && !error ? <span className="rounded-lg border border-stone-200 bg-[#fffefa] px-4 py-2 text-sm text-stone-500">전체 수련생 <strong className="ml-2 text-primary">{students.length}명</strong></span> : undefined} />
 
-      <StudentsToolbar
-        search={search}
-        onSearchChange={setSearch}
-        classGroupFilter={classGroupFilter}
-        onClassGroupFilterChange={setClassGroupFilter}
-        onCreate={() => setFormModal({ mode: "create" })}
-      />
+      <StudentsToolbar search={search} onSearchChange={setSearch} onCreate={() => setFormModal({ mode: "create" })} />
 
       {loading ? (
         <LoadingState label="학생 정보를 불러오는 중입니다..." />

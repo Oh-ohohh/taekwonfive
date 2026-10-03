@@ -1,19 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  /* 진한 남색 (primary) / 빨간색 (accent) — 태권도장 브랜드 컬러 */
-  --color-primary: #101a45;
-  --color-accent: #dc2626;
+  --background: #f3f9fc;
+  --foreground: #29455b;
+  --brand-primary: #2873a6;
+  --brand-accent: #147d79;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-primary: var(--color-primary);
-  --color-accent: var(--color-accent);
-  --font-sans: var(--font-geist-sans);
+  --color-primary: var(--brand-primary);
+  --color-accent: var(--brand-accent);
+  --font-sans: var(--font-geist-sans), "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -26,4 +25,68 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   overflow-x: hidden;
+}
+
+.dojang-surface {
+  background-color: var(--background);
+}
+
+.dojang-accent-bar {
+  background: linear-gradient(90deg, #91c9f0, #a5e4d4 60%, #ffe2af);
+}
+
+::selection {
+  background: var(--brand-primary);
+  color: white;
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 4px;
+}
+
+button:not(:disabled), select {
+  cursor: pointer;
+}
+
+.dojang-hero {
+  background: linear-gradient(120deg, #eaf5ff, #edf9f2 65%, #fffaec);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  /* margin: 0 은 의도적이다 — 크롬 계열 브라우저는 @page 여백이 없으면
+     인쇄용 머리글(날짜/제목)·꼬리글(URL/쪽번호)을 표시하지 않는다.
+     대신 인쇄되는 콘텐츠 쪽에서 같은 만큼의 여백을 직접 채워야 한다
+     (attendance-range-pdf-view.tsx의 print:p-[10mm] 참고). */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: white;
+  }
+
+  .dojang-surface {
+    background-image: none;
+    background-color: white;
+  }
+
+  .dojang-accent-bar {
+    display: none;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

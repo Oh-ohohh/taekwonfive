@@ -1,4 +1,5 @@
 import type { AttendanceEntry } from "@/types/attendance";
+import { formatBeltLabel } from "@/types/student";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/data-states";
 import { formatTime } from "@/lib/date";
@@ -15,7 +16,7 @@ export function RecentAttendanceList({ entries }: { entries: AttendanceEntry[] }
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-800">{student.name}</p>
             <p className="truncate text-xs text-slate-400">
-              {student.classGroup} · {student.school} {student.grade}
+              {student.school ?? "-"} · {formatBeltLabel(student.grade, student.poom)}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2.5">

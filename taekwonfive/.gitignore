@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# Local student import sources and database backups (personal data)
+/local-data/
+
 # next.js
 /.next/
 /out/

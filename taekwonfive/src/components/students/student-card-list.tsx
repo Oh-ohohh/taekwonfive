@@ -2,7 +2,9 @@
 
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import type { Student } from "@/types/student";
-import { formatDateDots } from "@/lib/date";
+import { formatBeltLabel } from "@/types/student";
+import { formatDateTimeDots } from "@/lib/date";
+import { formatAttendanceDays } from "@/lib/student-schedule";
 
 export function StudentCardList({
   students,
@@ -21,31 +23,22 @@ export function StudentCardList({
         <li key={student.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="truncate text-base font-bold text-slate-900">{student.name}</p>
-                {!student.active && (
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                    휴회중
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 truncate text-xs text-slate-400">
-                {student.school} · {student.grade}
-              </p>
+              <p className="truncate text-base font-bold text-slate-900">{student.name}</p>
+              <p className="mt-0.5 truncate text-xs text-slate-400">{student.school ?? "-"}</p>
             </div>
             <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-              {student.classGroup}
+              {formatBeltLabel(student.grade, student.poom)}
             </span>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-y-1.5 text-xs text-slate-500">
-            <span>띠/품·단</span>
-            <span className="text-right font-medium text-slate-700">{student.belt}</span>
-            <span>보호자 연락처</span>
-            <span className="text-right font-medium text-slate-700">{student.guardianPhone}</span>
+            <span>출석 요일</span>
+            <span className="text-right font-medium text-slate-700">{formatAttendanceDays(student.attendanceDays)}</span>
+            <span>보호자</span>
+            <span className="text-right font-medium text-slate-700">{student.guardianName ?? "-"}</span>
             <span>등록일</span>
             <span className="text-right font-medium text-slate-700">
-              {formatDateDots(student.registrationDate)}
+              {formatDateTimeDots(student.createdAt)}
             </span>
           </div>
 

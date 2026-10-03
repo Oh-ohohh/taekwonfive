@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Student, StudentInput } from "@/types/student";
+import { sortStudentsByRank } from "@/lib/student-sort";
 import {
   createStudent,
   deleteStudent,
@@ -57,19 +58,21 @@ export function StudentsProvider({ children }: { children: ReactNode }) {
 
   const addStudent = useCallback(async (input: StudentInput) => {
     const created = await createStudent(input);
-    setStudents((prev) => [created, ...prev]);
+    setStudents((prev) => sortStudentsByRank([created, ...prev]));
     return created;
   }, []);
 
   const editStudent = useCallback(async (id: string, updates: Partial<StudentInput>) => {
     const updated = await updateStudent(id, updates);
     if (updated) {
-      setStudents((prev) => prev.map((student) => (student.id === id ? updated : student)));
+      setStudents((prev) => sortStudentsByRank(prev.map((student) => (student.id === id ? updated : student))));
     }
     return updated;
   }, []);
 
   const removeStudent = useCallback(async (id: string) => {
+    // Throws (e.g. StudentHasAttendanceError) on failure — callers should
+    // catch it themselves to show a specific message.
     const deleted = await deleteStudent(id);
     if (deleted) {
       setStudents((prev) => prev.filter((student) => student.id !== id));
