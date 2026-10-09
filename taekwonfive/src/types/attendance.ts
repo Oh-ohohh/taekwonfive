@@ -1,4 +1,5 @@
 import type { Student } from "@/types/student";
+import type { AttendanceRosterSummary } from "@/lib/attendance-roster";
 
 /**
  * Domain types for daily attendance tracking.
@@ -54,6 +55,8 @@ export type TodayAttendanceSummary = {
   notCheckedCount: number;
   attendanceRate: number;
   recentRecords: AttendanceRecord[];
+  /** 오늘 기준 수업 대상·출석·체크 전·출석률 */
+  roster: AttendanceRosterSummary;
 };
 
 export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {

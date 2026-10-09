@@ -3,7 +3,8 @@ import { isStudentScheduled } from "@/lib/student-schedule";
 import type { AttendanceEntry, AttendanceRecord, AttendanceStatus } from "@/types/attendance";
 import type { Student } from "@/types/student";
 
-export type AttendanceScope = "scheduled" | "all";
+/** "not_attended": 그날 수업 대상 중 아직 출석하지 않은 학생(체크 전·결석·기타). */
+export type AttendanceScope = "scheduled" | "not_attended" | "all";
 
 export function isAttending(status: AttendanceStatus): boolean {
   return status === "present" || status === "late";
@@ -23,6 +24,9 @@ export function getVisibleAttendanceEntries(
   entries: AttendanceEntry[], date: string, scope: AttendanceScope, today = getKoreaDateString()
 ): AttendanceEntry[] {
   if (scope === "all") return entries;
+  if (scope === "not_attended") {
+    return entries.filter((entry) => isStudentScheduled(entry.student, date) && !isAttending(entry.status));
+  }
   if (date < today) return entries.filter((entry) => entry.status !== "not_checked");
   return entries.filter((entry) => isStudentScheduled(entry.student, date) || isAttending(entry.status));
 }
@@ -45,6 +49,8 @@ export function getAttendanceRosterSummary(entries: AttendanceEntry[], date: str
     attendanceRate: historical || scheduled.length === 0 ? null : Math.round(scheduledPresent / scheduled.length * 100),
   };
 }
+
+export type AttendanceRosterSummary = ReturnType<typeof getAttendanceRosterSummary>;
 
 /** 자동 결석 처리를 시작한 날. 이전 날짜는 당시 출석요일을 알 수 없어 소급하지 않는다. */
 export const AUTO_ABSENT_START_DATE = "2026-10-08";

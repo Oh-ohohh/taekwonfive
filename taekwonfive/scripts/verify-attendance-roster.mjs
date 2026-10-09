@@ -56,6 +56,9 @@ const entries = buildAttendanceEntries(students, records);
 const ids = (items) => items.map((entry) => entry.student.id);
 assert.deepEqual(ids(getVisibleAttendanceEntries(entries, monday, "scheduled", monday)), ["1", "2", "3", "5", "6", "8"]);
 assert.equal(getVisibleAttendanceEntries(entries, monday, "all", monday).length, 8);
+// 미출석: 수업 대상 중 출석하지 않은 학생(체크 전·결석). 추가 출석·다른 요일·휴관 학생은 제외.
+assert.deepEqual(ids(getVisibleAttendanceEntries(entries, monday, "not_attended", monday)), ["2", "6", "8"]);
+assert.deepEqual(getVisibleAttendanceEntries(entries, "2026-10-09", "not_attended", "2026-10-09"), [], "No one is missing on a holiday");
 assert.deepEqual(getAttendanceRosterSummary(entries, monday, monday), {
   historical: false, scheduledCount: 4, scheduledPresent: 1, additionalPresent: 2,
   presentCount: 3, notCheckedCount: 2, absentCount: 1, otherCount: 0, attendanceRate: 25,

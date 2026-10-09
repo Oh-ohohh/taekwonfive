@@ -25,6 +25,10 @@ export function AttendanceView() {
   const [noteEntry, setNoteEntry] = useState<AttendanceEntry | null>(null);
   const today = getKoreaDateString();
   const summary = useMemo(() => getAttendanceRosterSummary(entries, selectedDate, today), [entries, selectedDate, today]);
+  const notAttendedCount = useMemo(
+    () => getVisibleAttendanceEntries(entries, selectedDate, "not_attended", today).length,
+    [entries, selectedDate, today]
+  );
   // 공휴일·주말은 수업 대상이 없어 출석 체크가 필요 없다. 나온 학생만 전체 학생에서 추가한다.
   const dayOffLabel = getDayOffLabel(selectedDate);
   const showDayOff = dayOffLabel !== null && !summary.historical;
@@ -160,13 +164,13 @@ export function AttendanceView() {
       )}
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="출석 명단 범위">
-        {(["scheduled", "all"] as const).map((value) => (
+        {(["scheduled", "not_attended", "all"] as const).map((value) => (
           <button key={value} type="button" aria-pressed={scope === value} onClick={() => setScope(value)}
             className={`rounded-xl border px-4 py-2 text-sm font-semibold ${scope === value ? "border-primary bg-primary text-white" : "border-slate-200 bg-white text-slate-600"}`}>
-            {value === "all" ? "전체 학생" : summary.historical ? "출결 기록" : "수업 대상"}
+            {value === "all" ? "전체 학생" : value === "not_attended" ? `미출석 ${notAttendedCount}명` : summary.historical ? "출결 기록" : "수업 대상"}
           </button>
         ))}
-        <span className="text-xs text-slate-500">보강은 전체 학생에서 체크하세요. 출석요일이 아닌 학생은 칸 색으로 구분되며, 그대로 출석 체크할 수 있습니다.</span>
+        <span className="text-xs text-slate-500">미출석은 그날 수업 대상 중 아직 출석하지 않은 학생(체크 전·결석·기타)입니다. 보강은 전체 학생에서 체크하세요. 출석요일이 아닌 학생은 칸 색으로 구분되며, 그대로 출석 체크할 수 있습니다.</span>
       </div>
 
       {loading ? (
@@ -175,7 +179,7 @@ export function AttendanceView() {
         <ErrorState message={error} onRetry={refresh} />
       ) : filteredEntries.length === 0 ? (
         <EmptyState
-          title={search || statusFilter !== "all" ? "검색 결과가 없습니다" : showDayOff && scope === "scheduled" ? "휴일이라 출석 체크가 필요 없습니다" : summary.historical && scope === "scheduled" ? "저장된 출결 기록이 없습니다" : "해당 날짜의 수업 대상이 없습니다"}
+          title={search || statusFilter !== "all" ? "검색 결과가 없습니다" : showDayOff && scope !== "all" ? "휴일이라 출석 체크가 필요 없습니다" : scope === "not_attended" ? "수업 대상이 모두 출석했습니다" : showDayOff && scope === "scheduled" ? "휴일이라 출석 체크가 필요 없습니다" : summary.historical && scope === "scheduled" ? "저장된 출결 기록이 없습니다" : "해당 날짜의 수업 대상이 없습니다"}
           description="검색 조건을 바꾸거나 전체 학생에서 출석할 학생을 확인해주세요."
         />
       ) : (

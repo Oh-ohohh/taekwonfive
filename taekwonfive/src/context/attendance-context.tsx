@@ -297,6 +297,7 @@ export function useTodayAttendanceSummary() {
 
   return {
     stats,
+    todayRoster: summary?.roster ?? null,
     recentlyAttended,
     loading: loading || studentsLoading,
     error: error ?? studentsError,

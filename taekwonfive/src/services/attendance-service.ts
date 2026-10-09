@@ -194,5 +194,6 @@ export async function getTodayAttendanceSummary(): Promise<TodayAttendanceSummar
     notCheckedCount,
     attendanceRate,
     recentRecords,
+    roster,
   };
 }
