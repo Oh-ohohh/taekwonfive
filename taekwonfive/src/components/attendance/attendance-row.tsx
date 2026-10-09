@@ -9,7 +9,7 @@ import { Check, Loader2 } from "lucide-react";
 /** Unchecked cards show only the name. Only an explicit absent record
  * is labelled 결석; toggling an attendance off clears the record.
  * Cards whose student is not scheduled for the date are tinted
- * (다른 요일 amber, 휴관 slate) but stay checkable — they may show up. */
+ * (다른 요일 amber, 휴관 slate, 공휴일·주말 rose) but stay checkable — they may show up. */
 export function AttendanceRow({
   entry,
   onToggle,
@@ -27,6 +27,7 @@ export function AttendanceRow({
   const attending = status === "present" || status === "late";
   const offDay = scheduleState === "off_day";
   const onLeave = scheduleState === "on_leave";
+  const dayOff = scheduleState === "day_off";
   const beltLabel = formatBeltLabel(student.grade, student.poom);
   const statusLabel = attending ? "출석 완료" : status === "absent" ? "결석" : onLeave ? "휴관" : "";
 
@@ -37,6 +38,7 @@ export function AttendanceRow({
           ? "border-sky-300 bg-sky-100 text-sky-900"
           : onLeave ? "border-slate-300 bg-slate-100 text-slate-500 hover:border-slate-400 hover:bg-slate-200"
           : offDay ? "border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-400 hover:bg-amber-100"
+          : dayOff ? "border-rose-200 bg-rose-50 text-rose-900 hover:border-rose-300 hover:bg-rose-100"
           : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
       }`}
     >
@@ -66,7 +68,7 @@ export function AttendanceRow({
         )}
       </div>
       {beltLabel !== "-" && (
-        <span className={`pointer-events-none -mt-1.5 w-full truncate text-xs font-medium ${attending ? "text-sky-700" : offDay ? "text-amber-700" : "text-slate-500"}`}>
+        <span className={`pointer-events-none -mt-1.5 w-full truncate text-xs font-medium ${attending ? "text-sky-700" : offDay ? "text-amber-700" : dayOff ? "text-rose-700" : "text-slate-500"}`}>
           {beltLabel}
         </span>
       )}

@@ -19,6 +19,7 @@ export function AttendanceToolbar({
   statusFilter,
   onStatusFilterChange,
   historical = false,
+  dayOffLabel = null,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -27,12 +28,16 @@ export function AttendanceToolbar({
   statusFilter: AttendanceStatusFilter;
   onStatusFilterChange: (value: AttendanceStatusFilter) => void;
   historical?: boolean;
+  dayOffLabel?: string | null;
 }) {
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center gap-2 text-lg font-bold text-slate-800 sm:text-xl">
         <CalendarDays className="h-5 w-5 text-primary" />
         {formatFullDateWithWeekday(selectedDate)}
+        {dayOffLabel && (
+          <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700">{dayOffLabel}</span>
+        )}
       </div>
 
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">

@@ -11,6 +11,7 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { getAttendanceRosterSummary, getVisibleAttendanceEntries, isAttending, type AttendanceScope } from "@/lib/attendance-roster";
 import { getScheduleState, isStudentOnLeave, isStudentScheduled } from "@/lib/student-schedule";
 import { getKoreaDateString } from "@/lib/date";
+import { getDayOffLabel } from "@/lib/holidays";
 
 export function AttendanceView() {
   const { entries, loading, error, refresh, selectedDate, setSelectedDate, setStatus, resetStatus, setClassSession } =
@@ -22,6 +23,9 @@ export function AttendanceView() {
   const [scope, setScope] = useState<AttendanceScope>("scheduled");
   const today = getKoreaDateString();
   const summary = useMemo(() => getAttendanceRosterSummary(entries, selectedDate, today), [entries, selectedDate, today]);
+  // 공휴일·주말은 수업 대상이 없어 출석 체크가 필요 없다. 나온 학생만 전체 학생에서 추가한다.
+  const dayOffLabel = getDayOffLabel(selectedDate);
+  const showDayOff = dayOffLabel !== null && !summary.historical;
 
   const filteredEntries = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -72,6 +76,7 @@ export function AttendanceView() {
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-sky-400" />출석 완료</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />다른 요일 수업</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-400" />휴관</span>
+        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-rose-400" />휴일(주말·공휴일)</span>
         <span className="sm:ml-auto">이름을 다시 누르면 출석이 해제됩니다. 이름 옆에서 수업 부를 바꿀 수 있어요.</span>
       </div>
       <p className="text-xs leading-relaxed text-slate-500">수업 시작 10분 전부터 자동 지정됩니다. 시간 공백이나 과거 날짜의 출석은 부를 직접 선택해주세요.</p>
@@ -84,12 +89,30 @@ export function AttendanceView() {
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         historical={summary.historical}
+        dayOffLabel={dayOffLabel}
       />
+
+      {dayOffLabel && (
+        <div className="flex flex-col gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:flex-row sm:items-center">
+          <p>
+            <span className="font-bold">{dayOffLabel === "휴일" ? "주말 휴일" : `${dayOffLabel} (공휴일)`}</span>
+            {" "}— 출석 체크가 필요 없습니다. 출석한 학생이 있으면 전체 학생에서 추가해주세요.
+          </p>
+          {scope !== "all" && (
+            <button type="button" onClick={() => setScope("all")}
+              className="shrink-0 self-start rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 sm:ml-auto sm:self-auto">
+              전체 학생에서 추가
+            </button>
+          )}
+        </div>
+      )}
 
       {!loading && !error && (
         <>
-          <dl className={`grid gap-2.5 ${summary.historical ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
-            {(summary.historical
+          <dl className={`grid gap-2.5 ${summary.historical || showDayOff ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
+            {(showDayOff
+              ? [{ label: "휴일 출석", value: summary.presentCount }]
+              : summary.historical
               ? [{ label: "출석 인원", value: summary.presentCount }, { label: "기록된 결석", value: summary.absentCount }]
               : [{ label: "수업 대상", value: summary.scheduledCount }, { label: "대상 중 출석", value: summary.scheduledPresent },
                 { label: "대상 중 체크 전", value: summary.notCheckedCount }, { label: "추가 출석", value: summary.additionalPresent }]
@@ -101,7 +124,9 @@ export function AttendanceView() {
             ))}
           </dl>
           <p className="text-xs leading-relaxed text-slate-500">
-            {summary.historical
+            {showDayOff
+              ? "휴일에는 수업 대상이 없어 체크 전·결석을 집계하지 않습니다."
+              : summary.historical
               ? "과거 날짜는 저장된 출결 기록을 표시합니다. 당시 수업 대상과 출석률은 계산하지 않습니다."
               : `전체 출석 ${summary.presentCount}명 · 대상 중 결석 ${summary.absentCount}명. 휴관 학생과 다른 요일 학생은 수업 대상에 포함되지 않습니다.`}
           </p>
@@ -124,7 +149,7 @@ export function AttendanceView() {
         <ErrorState message={error} onRetry={refresh} />
       ) : filteredEntries.length === 0 ? (
         <EmptyState
-          title={search || statusFilter !== "all" ? "검색 결과가 없습니다" : summary.historical && scope === "scheduled" ? "저장된 출결 기록이 없습니다" : "해당 날짜의 수업 대상이 없습니다"}
+          title={search || statusFilter !== "all" ? "검색 결과가 없습니다" : showDayOff && scope === "scheduled" ? "휴일이라 출석 체크가 필요 없습니다" : summary.historical && scope === "scheduled" ? "저장된 출결 기록이 없습니다" : "해당 날짜의 수업 대상이 없습니다"}
           description="검색 조건을 바꾸거나 전체 학생에서 출석할 학생을 확인해주세요."
         />
       ) : (
@@ -136,7 +161,8 @@ export function AttendanceView() {
               <AttendanceRow key={entry.student.id} entry={entry} onToggle={handleToggle} onClassSessionChange={handleClassSessionChange}
                 scheduleState={scheduleState}
                 attendanceNote={scheduleState === "on_leave" ? (summary.historical ? "현재 휴관 중" : "휴관 중 · 출석 가능")
-                  : scheduleState === "off_day" ? (isAttending(entry.status) ? "추가 출석" : "다른 요일 수업") : undefined}
+                  : scheduleState === "off_day" ? (isAttending(entry.status) ? "추가 출석" : "다른 요일 수업")
+                  : scheduleState === "day_off" && isAttending(entry.status) ? "휴일 출석" : undefined}
               />
             );
           })}

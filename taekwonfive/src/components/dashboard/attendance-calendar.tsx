@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatMonthLabel, getKoreaMonthString, getMonthCalendarDates, shiftMonth } from "@/lib/date";
+import { getDayOffLabel } from "@/lib/holidays";
 
 export type CalendarDaySummary = {
   attendingCount: number;
@@ -86,6 +87,7 @@ export function AttendanceCalendar({
           const isSelected = date === selectedDate;
           const isToday = date === todayString;
           const attendanceText = `${summary?.attendingCount ?? 0}명`;
+          const dayOffLabel = getDayOffLabel(date);
 
           return (
             <button
@@ -94,7 +96,7 @@ export function AttendanceCalendar({
               disabled={isFuture}
               onClick={() => onSelectDate(date)}
               aria-pressed={isSelected}
-              aria-label={`${date}, ${attendanceText} 출석${summary?.recordedCount ? `, ${summary.recordedCount}명 처리됨` : ", 기록 없음"}`}
+              aria-label={`${date}${dayOffLabel ? `, ${dayOffLabel}` : ""}, ${attendanceText} 출석${summary?.recordedCount ? `, ${summary.recordedCount}명 처리됨` : ", 기록 없음"}`}
               className={`flex min-h-20 min-w-0 flex-col rounded-lg border px-1 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 sm:min-h-24 sm:px-3 ${
                 isSelected
                   ? "border-accent bg-accent text-white shadow-sm"
@@ -105,11 +107,16 @@ export function AttendanceCalendar({
             >
               <span
                 className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-                  isToday && !isSelected ? "bg-primary/10 text-primary" : ""
+                  isToday && !isSelected ? "bg-primary/10 text-primary" : dayOffLabel && !isSelected && !isFuture ? "text-rose-500" : ""
                 }`}
               >
                 {Number(date.slice(-2))}
               </span>
+              {dayOffLabel && (
+                <span className={`mt-0.5 w-full truncate text-[9px] font-semibold leading-3 sm:text-[10px] ${isSelected ? "text-white/85" : isFuture ? "text-rose-300" : "text-rose-500"}`}>
+                  {dayOffLabel}
+                </span>
+              )}
               {!isFuture && (
                 <>
                   <span className={`mt-auto text-[10px] font-semibold leading-3 sm:text-xs ${isSelected ? "text-white" : "text-slate-700"}`}>
@@ -126,7 +133,7 @@ export function AttendanceCalendar({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-        <span>휴관과 수업 없는 요일은 결석으로 자동 집계하지 않습니다.</span>
+        <span>휴관·수업 없는 요일·휴일(주말·공휴일)은 결석으로 자동 집계하지 않습니다.</span>
         <span>날짜를 선택하면 상단에 해당 일자의 출결 현황이 표시됩니다.</span>
       </div>
     </section>

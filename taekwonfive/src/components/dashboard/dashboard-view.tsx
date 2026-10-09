@@ -11,6 +11,7 @@ import { formatFullDateWithWeekday, getKoreaDateString, getKoreaMonthString } fr
 import type { AttendanceRecord } from "@/types/attendance";
 import { PageHeading } from "@/components/layout/page-heading";
 import { DojangBanner } from "@/components/dashboard/dojang-banner";
+import { getDayOffLabel } from "@/lib/holidays";
 import { buildAttendanceEntries, getAttendanceRosterSummary, isAttending } from "@/lib/attendance-roster";
 import { ReportRangeModal } from "@/components/dashboard/report-range-modal";
 
@@ -74,6 +75,9 @@ export function DashboardView() {
               <p className="text-xs font-medium text-stone-500">선택일 수련 현황</p>
               <div className="mt-0.5 flex flex-wrap items-center gap-2 sm:gap-3">
                 <h2 className="text-lg font-bold tracking-tight text-primary sm:text-xl">{formatFullDateWithWeekday(selectedDate)}</h2>
+                {getDayOffLabel(selectedDate) && (
+                  <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700">{getDayOffLabel(selectedDate)}</span>
+                )}
                 <button
                   type="button"
                   onClick={() => setReportOpen(true)}
