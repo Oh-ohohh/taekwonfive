@@ -98,7 +98,7 @@ export function AttendanceView() {
       <PageHeading eyebrow="SHOW UP. GROW STRONG." title={summary.historical ? "출석 기록" : selectedDate > today ? "미리 출석 체크" : "오늘의 출석"} description="날짜에 맞는 수업 대상을 확인하고, 이름을 눌러 출석을 체크하세요." />
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-sky-100 bg-white px-4 py-3 text-xs text-slate-500">
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-sky-400" />출석 완료</span>
-        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />다른 요일 수업</span>
+        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />해당 요일 수업 학생 아님</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-400" />휴관</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-rose-400" />휴일(주말·공휴일)</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400" />결석</span>
@@ -154,7 +154,7 @@ export function AttendanceView() {
               ? "휴일에는 수업 대상이 없어 체크 전·결석을 집계하지 않습니다."
               : summary.historical
               ? "과거 날짜는 저장된 출결 기록을 표시합니다. 당시 수업 대상과 출석률은 계산하지 않습니다."
-              : `전체 출석 ${summary.presentCount}명 · 대상 중 결석 ${summary.absentCount}명 · 기타 ${summary.otherCount}명. 휴관 학생과 다른 요일 학생은 수업 대상에 포함되지 않습니다. 체크하지 않은 수업 대상은 다음 날 자동으로 결석 처리됩니다.`}
+              : `전체 출석 ${summary.presentCount}명 · 대상 중 결석 ${summary.absentCount}명 · 기타 ${summary.otherCount}명. 휴관 학생과 해당 요일에 수업하지 않는 학생은 수업 대상에 포함되지 않습니다. 체크하지 않은 수업 대상은 다음 날 자동으로 결석 처리됩니다.`}
           </p>
         </>
       )}
@@ -187,7 +187,7 @@ export function AttendanceView() {
               <AttendanceRow key={entry.student.id} entry={entry} onToggle={handleToggle} onClassSessionChange={handleClassSessionChange} onEditNote={setNoteEntry}
                 scheduleState={scheduleState}
                 attendanceNote={scheduleState === "on_leave" ? (summary.historical ? "현재 휴관 중" : "휴관 중 · 출석 가능")
-                  : scheduleState === "off_day" ? (isAttending(entry.status) ? "추가 출석" : "다른 요일 수업")
+                  : scheduleState === "off_day" ? (isAttending(entry.status) ? "추가 출석" : "해당 요일 수업 학생 아님")
                   : scheduleState === "day_off" && isAttending(entry.status) ? "휴일 출석" : undefined}
               />
             );
