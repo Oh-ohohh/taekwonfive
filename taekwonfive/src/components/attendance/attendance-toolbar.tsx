@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarDays, Search } from "lucide-react";
-import { formatFullDateWithWeekday, getKoreaDateString } from "@/lib/date";
+import { formatFullDateWithWeekday } from "@/lib/date";
 
 export type AttendanceStatusFilter = "all" | "present" | "not_checked" | "absent" | "other";
 
@@ -58,7 +58,6 @@ export function AttendanceToolbar({
           type="date"
           aria-label="출석 확인 날짜"
           value={selectedDate}
-          max={getKoreaDateString()}
           onChange={(e) => onSelectedDateChange(e.target.value)}
           className="h-11 shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />

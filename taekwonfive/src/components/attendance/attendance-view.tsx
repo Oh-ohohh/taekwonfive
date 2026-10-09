@@ -95,7 +95,7 @@ export function AttendanceView() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeading eyebrow="SHOW UP. GROW STRONG." title={summary.historical ? "출석 기록" : "오늘의 출석"} description="날짜에 맞는 수업 대상을 확인하고, 이름을 눌러 출석을 체크하세요." />
+      <PageHeading eyebrow="SHOW UP. GROW STRONG." title={summary.historical ? "출석 기록" : selectedDate > today ? "미리 출석 체크" : "오늘의 출석"} description="날짜에 맞는 수업 대상을 확인하고, 이름을 눌러 출석을 체크하세요." />
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-sky-100 bg-white px-4 py-3 text-xs text-slate-500">
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-sky-400" />출석 완료</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />다른 요일 수업</span>
@@ -105,7 +105,7 @@ export function AttendanceView() {
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-violet-400" />기타</span>
         <span className="sm:ml-auto">이름을 다시 누르면 출석이 해제됩니다. 이름 옆에서 수업 부·결석·기타를 바꿀 수 있어요.</span>
       </div>
-      <p className="text-xs leading-relaxed text-slate-500">수업 시작 10분 전부터 자동 지정됩니다. 시간 공백이나 과거 날짜의 출석은 부를 직접 선택해주세요.</p>
+      <p className="text-xs leading-relaxed text-slate-500">수업 시작 10분 전부터 자동 지정됩니다. 시간 공백이나 오늘이 아닌 날짜(과거·미래)의 출석은 부를 직접 선택해주세요.</p>
 
       <AttendanceToolbar
         search={search}

@@ -26,7 +26,7 @@ import {
   upsertAttendance,
   updateAttendanceClassSession,
 } from "@/services/attendance-service";
-import { getKoreaDateString, getMonthDateRange } from "@/lib/date";
+import { getKoreaDateString, getMonthDateRange, isCalendarDateString } from "@/lib/date";
 import { useStudents } from "@/context/students-context";
 
 type AttendanceContextValue = {
@@ -105,15 +105,13 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [students, studentsLoading, studentsError, refresh]);
 
-  // Never allow a future (Korea-time) date to be selected.
+  // 미래 날짜도 미리 출석 체크할 수 있다. 비었거나 잘못된 값만 무시한다.
   const setSelectedDate = useCallback((date: string) => {
-    const today = getKoreaDateString();
-    const nextDate = date > today ? today : date;
-    if (!nextDate || nextDate === currentDate.current) return;
-    currentDate.current = nextDate;
+    if (!isCalendarDateString(date) || date === currentDate.current) return;
+    currentDate.current = date;
     setLoading(true);
     setRecords([]);
-    setSelectedDateState(nextDate);
+    setSelectedDateState(date);
   }, []);
 
   // Combine the roster with the selected date's records into one
