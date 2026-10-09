@@ -2,6 +2,7 @@
 
 import type { AttendanceEntry, ClassSession } from "@/types/attendance";
 import { CLASS_SESSIONS } from "@/lib/class-session";
+import { formatBeltLabel } from "@/types/student";
 import type { ScheduleState } from "@/lib/student-schedule";
 import { Check, Loader2 } from "lucide-react";
 
@@ -26,6 +27,7 @@ export function AttendanceRow({
   const attending = status === "present" || status === "late";
   const offDay = scheduleState === "off_day";
   const onLeave = scheduleState === "on_leave";
+  const beltLabel = formatBeltLabel(student.grade, student.poom);
   const statusLabel = attending ? "출석 완료" : status === "absent" ? "결석" : onLeave ? "휴관" : "";
 
   return (
@@ -43,7 +45,7 @@ export function AttendanceRow({
         onClick={() => onToggle(entry)}
         disabled={pending}
         aria-pressed={attending}
-        aria-label={`${student.name}${statusLabel ? `, ${statusLabel}` : ""}${attendanceNote ? `, ${attendanceNote}` : ""}${pending ? ", 처리 중" : ""}`}
+        aria-label={`${student.name}${beltLabel !== "-" ? `, ${beltLabel}` : ""}${statusLabel ? `, ${statusLabel}` : ""}${attendanceNote ? `, ${attendanceNote}` : ""}${pending ? ", 처리 중" : ""}`}
         className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-default"
       />
       <div className="pointer-events-none flex w-full min-w-0 items-center gap-1.5">
@@ -63,6 +65,11 @@ export function AttendanceRow({
           </select>
         )}
       </div>
+      {beltLabel !== "-" && (
+        <span className={`pointer-events-none -mt-1.5 w-full truncate text-xs font-medium ${attending ? "text-sky-700" : offDay ? "text-amber-700" : "text-slate-500"}`}>
+          {beltLabel}
+        </span>
+      )}
       {(pending || statusLabel) && (
         <span className={`pointer-events-none flex items-center gap-1.5 text-[11px] font-medium ${attending ? "text-sky-700" : offDay ? "text-amber-700" : "text-slate-500"}`}>
           {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : attending ? <Check className="h-3 w-3" /> : null}
