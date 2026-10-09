@@ -9,7 +9,8 @@ import type { Student } from "@/types/student";
  * constraint), only as the view-model's default for an absent record.
  */
 
-export type AttendanceStatus = "not_checked" | "present" | "late" | "absent";
+/** "other"(기타)는 출석도 결석도 아닌 상태로, 어느 집계에도 넣지 않는다. */
+export type AttendanceStatus = "not_checked" | "present" | "late" | "absent" | "other";
 
 /** The subset of `AttendanceStatus` that can actually be persisted. */
 export type StoredAttendanceStatus = Exclude<AttendanceStatus, "not_checked">;
@@ -38,6 +39,8 @@ export type AttendanceEntry = {
   status: AttendanceStatus;
   checkedAt: string | null;
   classSession: ClassSession | null;
+  /** 결석·기타일 때 남기는 선택 메모 */
+  note?: string | null;
   /** True while a status change for this student is being saved. */
   pending?: boolean;
 };
@@ -58,4 +61,5 @@ export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
   present: "출석",
   late: "지각",
   absent: "결석",
+  other: "기타",
 };

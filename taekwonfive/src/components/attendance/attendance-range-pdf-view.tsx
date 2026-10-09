@@ -120,7 +120,7 @@ export function AttendanceRangePdfView({ startDate, endDate, autoPrint }: { star
             </p>
           </div>
           <div className="shrink-0 text-right text-xs text-slate-500">
-            <p>○ 출석 · × 결석 · 회색 칸 출석요일 아님</p>
+            <p>○ 출석 · × 결석 · △ 기타 · 회색 칸 출석요일 아님</p>
             <p className="mt-1 text-slate-400">출력일 {formatDateDots(getKoreaDateString())}</p>
           </div>
         </header>
@@ -165,6 +165,8 @@ export function AttendanceRangePdfView({ startDate, endDate, autoPrint }: { star
                             <span className="font-bold text-sky-700">○</span>
                           ) : record?.status === "absent" ? (
                             <span className="font-bold text-red-500">×</span>
+                          ) : record?.status === "other" ? (
+                            <span className="font-bold text-violet-500">△</span>
                           ) : null}
                         </td>
                       );

@@ -3,12 +3,13 @@
 import { CalendarDays, Search } from "lucide-react";
 import { formatFullDateWithWeekday, getKoreaDateString } from "@/lib/date";
 
-export type AttendanceStatusFilter = "all" | "present" | "not_checked" | "absent";
+export type AttendanceStatusFilter = "all" | "present" | "not_checked" | "absent" | "other";
 
 const STATUS_OPTIONS: { value: AttendanceStatusFilter; label: string }[] = [
   { value: "present", label: "출석" },
   { value: "not_checked", label: "수업 대상 중 체크 전" },
   { value: "absent", label: "결석" },
+  { value: "other", label: "기타" },
 ];
 
 export function AttendanceToolbar({

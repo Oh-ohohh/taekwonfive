@@ -1,4 +1,4 @@
-import { getKoreaDateString } from "@/lib/date";
+import { getDateRangeDates, getKoreaDateString, shiftDate } from "@/lib/date";
 import { isStudentScheduled } from "@/lib/student-schedule";
 import type { AttendanceEntry, AttendanceRecord, AttendanceStatus } from "@/types/attendance";
 import type { Student } from "@/types/student";
@@ -13,7 +13,7 @@ export function buildAttendanceEntries(students: Student[], records: AttendanceR
   const byStudent = new Map(records.map((record) => [record.studentId, record]));
   return students.map((student) => {
     const record = byStudent.get(student.id);
-    return { student, status: record?.status ?? "not_checked", checkedAt: record?.checkedAt ?? null, classSession: record?.classSession ?? null };
+    return { student, status: record?.status ?? "not_checked", checkedAt: record?.checkedAt ?? null, classSession: record?.classSession ?? null, note: record?.note ?? null };
   });
 }
 
@@ -40,8 +40,36 @@ export function getAttendanceRosterSummary(entries: AttendanceEntry[], date: str
     presentCount,
     notCheckedCount: historical ? null : scheduled.filter((entry) => entry.status === "not_checked").length,
     absentCount: (historical ? entries : scheduled).filter((entry) => entry.status === "absent").length,
+    /** 기타는 출석·결석 어디에도 넣지 않고 따로 센다. */
+    otherCount: entries.filter((entry) => entry.status === "other").length,
     attendanceRate: historical || scheduled.length === 0 ? null : Math.round(scheduledPresent / scheduled.length * 100),
   };
+}
+
+/** 자동 결석 처리를 시작한 날. 이전 날짜는 당시 출석요일을 알 수 없어 소급하지 않는다. */
+export const AUTO_ABSENT_START_DATE = "2026-10-08";
+/** 앱을 오래 열지 않았을 때 한 번에 거슬러 올라가 처리하는 최대 일수. */
+const AUTO_ABSENT_LOOKBACK_DAYS = 31;
+
+/** 자동 결석 처리 대상 기간(어제까지). 처리할 날이 없으면 null. */
+export function getAutoAbsentRange(today = getKoreaDateString()): { startDate: string; endDate: string } | null {
+  const endDate = shiftDate(today, -1);
+  const lookback = shiftDate(today, -AUTO_ABSENT_LOOKBACK_DAYS);
+  const startDate = lookback > AUTO_ABSENT_START_DATE ? lookback : AUTO_ABSENT_START_DATE;
+  return startDate > endDate ? null : { startDate, endDate };
+}
+
+/** 지난 날짜에 수업 대상이었는데 아무 기록이 없는 학생 → 결석으로 저장할 목록.
+ * 공휴일·주말·다른 요일·휴관 학생과 그날 이후 등록한 학생은 제외한다. */
+export function getAutoAbsentTargets(
+  students: Student[], records: AttendanceRecord[], startDate: string, endDate: string
+): { studentId: string; date: string }[] {
+  const recorded = new Set(records.map((record) => `${record.studentId}|${record.date}`));
+  return getDateRangeDates(startDate, endDate).flatMap((date) => students
+    .filter((student) => isStudentScheduled(student, date)
+      && (!student.createdAt || getKoreaDateString(new Date(student.createdAt)) <= date)
+      && !recorded.has(`${student.id}|${date}`))
+    .map((student) => ({ studentId: student.id, date })));
 }
 
 /** PDF 기간 출석부의 최대 일수. 가로 A4 한 장 폭에 날짜 칸이 들어가는 한도. */

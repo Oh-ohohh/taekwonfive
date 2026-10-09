@@ -21,6 +21,7 @@ import {
   getAttendanceByDate,
   getAttendanceByDateRange,
   getTodayAttendanceSummary,
+  markMissedAttendanceAbsent,
   resetAttendance,
   upsertAttendance,
   updateAttendanceClassSession,
@@ -35,9 +36,15 @@ type AttendanceContextValue = {
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   refresh: () => Promise<void>;
-  setStatus: (studentId: string, status: StoredAttendanceStatus) => Promise<AttendanceEntry>;
+  setStatus: (
+    studentId: string,
+    status: StoredAttendanceStatus,
+    options?: { classSession?: ClassSession; note?: string | null }
+  ) => Promise<AttendanceEntry>;
   resetStatus: (studentId: string) => Promise<void>;
   setClassSession: (studentId: string, classSession: ClassSession | null) => Promise<void>;
+  /** 자동 결석 처리로 저장된 기록이 생길 때마다 바뀐다. 다른 조회 훅이 다시 불러오는 신호. */
+  recordsVersion: number;
 };
 
 const AttendanceContext = createContext<AttendanceContextValue | undefined>(undefined);
@@ -50,6 +57,8 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recordsVersion, setRecordsVersion] = useState(0);
+  const autoAbsentDate = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -72,6 +81,30 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
     });
   }, [refresh]);
 
+  // 다음 날이 되면 전날까지 체크하지 않은 수업 대상 학생을 결석으로 저장한다.
+  // 앱을 열 때와 화면으로 돌아올 때 하루에 한 번 확인한다.
+  useEffect(() => {
+    if (studentsLoading || studentsError || students.length === 0) return;
+    async function run() {
+      const today = getKoreaDateString();
+      if (autoAbsentDate.current === today) return;
+      autoAbsentDate.current = today;
+      try {
+        const saved = await markMissedAttendanceAbsent(students, today);
+        if (saved > 0) {
+          setRecordsVersion((version) => version + 1);
+          if (currentDate.current < today) void refresh();
+        }
+      } catch {
+        autoAbsentDate.current = null;
+      }
+    }
+    void run();
+    const handleVisible = () => { if (document.visibilityState === "visible") void run(); };
+    document.addEventListener("visibilitychange", handleVisible);
+    return () => document.removeEventListener("visibilitychange", handleVisible);
+  }, [students, studentsLoading, studentsError, refresh]);
+
   // Never allow a future (Korea-time) date to be selected.
   const setSelectedDate = useCallback((date: string) => {
     const today = getKoreaDateString();
@@ -93,13 +126,14 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
         status: record?.status ?? "not_checked",
         checkedAt: record?.checkedAt ?? null,
         classSession: record?.classSession ?? null,
+        note: record?.note ?? null,
         pending: pendingIds.has(student.id),
       };
     });
   }, [students, records, pendingIds]);
 
   const setStatus = useCallback(
-    async (studentId: string, status: StoredAttendanceStatus) => {
+    async (studentId: string, status: StoredAttendanceStatus, options?: { classSession?: ClassSession; note?: string | null }) => {
       const student = students.find((item) => item.id === studentId);
       // 출석요일이 아닌 날(다른 요일·휴관)에도 보강·방문 출석은 체크할 수 있다.
       if (!student) {
@@ -107,7 +141,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
       }
       setPendingIds((prev) => new Set(prev).add(studentId));
       try {
-        const record = await upsertAttendance(studentId, selectedDate, status);
+        const record = await upsertAttendance(studentId, selectedDate, status, options);
         setRecords((prev) => {
           if (currentDate.current !== selectedDate) return prev;
           const existingIndex = prev.findIndex((r) => r.studentId === studentId);
@@ -116,7 +150,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
           }
           return [...prev, record];
         });
-        return { student, status: record.status, checkedAt: record.checkedAt, classSession: record.classSession };
+        return { student, status: record.status, checkedAt: record.checkedAt, classSession: record.classSession, note: record.note };
       } finally {
         setPendingIds((prev) => {
           const next = new Set(prev);
@@ -177,6 +211,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
       setStatus,
       resetStatus,
       setClassSession,
+      recordsVersion,
     }),
     [
       entries,
@@ -190,6 +225,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
       setStatus,
       resetStatus,
       setClassSession,
+      recordsVersion,
     ]
   );
 
@@ -214,6 +250,7 @@ export function useAttendance() {
  */
 export function useTodayAttendanceSummary() {
   const { students, loading: studentsLoading, error: studentsError } = useStudents();
+  const recordsVersion = useContext(AttendanceContext)?.recordsVersion ?? 0;
   const [summary, setSummary] = useState<TodayAttendanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -229,7 +266,9 @@ export function useTodayAttendanceSummary() {
     } finally {
       setLoading(false);
     }
-  }, []);
+    // recordsVersion: 자동 결석 저장 후 다시 불러온다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordsVersion]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -274,6 +313,7 @@ export function useTodayAttendanceSummary() {
  */
 export function useMonthlyAttendanceSummary(month: string) {
   const { students, loading: studentsLoading, error: studentsError } = useStudents();
+  const recordsVersion = useContext(AttendanceContext)?.recordsVersion ?? 0;
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -290,7 +330,9 @@ export function useMonthlyAttendanceSummary(month: string) {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+    // recordsVersion: 자동 결석 저장 후 다시 불러온다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, recordsVersion]);
 
   useEffect(() => {
     queueMicrotask(() => {

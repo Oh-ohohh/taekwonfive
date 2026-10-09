@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { useAttendance } from "@/context/attendance-context";
 import { useToast } from "@/components/ui/toast-provider";
 import { AttendanceToolbar, type AttendanceStatusFilter } from "@/components/attendance/attendance-toolbar";
-import { AttendanceRow } from "@/components/attendance/attendance-row";
+import { AttendanceRow, type AttendanceMark } from "@/components/attendance/attendance-row";
+import { AttendanceNoteModal } from "@/components/attendance/attendance-note-modal";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/data-states";
-import type { AttendanceEntry, ClassSession } from "@/types/attendance";
+import type { AttendanceEntry } from "@/types/attendance";
 import { PageHeading } from "@/components/layout/page-heading";
 import { getAttendanceRosterSummary, getVisibleAttendanceEntries, isAttending, type AttendanceScope } from "@/lib/attendance-roster";
 import { getScheduleState, isStudentOnLeave, isStudentScheduled } from "@/lib/student-schedule";
@@ -21,6 +22,7 @@ export function AttendanceView() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<AttendanceStatusFilter>("all");
   const [scope, setScope] = useState<AttendanceScope>("scheduled");
+  const [noteEntry, setNoteEntry] = useState<AttendanceEntry | null>(null);
   const today = getKoreaDateString();
   const summary = useMemo(() => getAttendanceRosterSummary(entries, selectedDate, today), [entries, selectedDate, today]);
   // 공휴일·주말은 수업 대상이 없어 출석 체크가 필요 없다. 나온 학생만 전체 학생에서 추가한다.
@@ -57,15 +59,37 @@ export function AttendanceView() {
     }
   }
 
-  async function handleClassSessionChange(entry: AttendanceEntry, classSession: ClassSession | null) {
-    if (entry.pending || entry.classSession === classSession) return;
+  async function handleClassSessionChange(entry: AttendanceEntry, mark: AttendanceMark) {
+    if (entry.pending) return;
+    const name = entry.student.name;
     try {
-      await setClassSession(entry.student.id, classSession);
-      notify(classSession
-        ? `${entry.student.name} 학생의 수업을 ${classSession}부로 변경했습니다.`
-        : `${entry.student.name} 학생의 수업 부 선택을 해제했습니다.`);
+      if (mark === "absent" || mark === "other") {
+        if (entry.status === mark) return;
+        const result = await setStatus(entry.student.id, mark);
+        notify(`${name} 학생을 ${mark === "absent" ? "결석" : "기타"}로 처리했습니다. 필요하면 메모를 남겨주세요.`);
+        setNoteEntry({ ...entry, status: result.status, note: result.note ?? null, classSession: null });
+      } else if (isAttending(entry.status)) {
+        if (entry.classSession === mark) return;
+        await setClassSession(entry.student.id, mark);
+        notify(mark ? `${name} 학생의 수업을 ${mark}부로 변경했습니다.` : `${name} 학생의 수업 부 선택을 해제했습니다.`);
+      } else if (mark !== null) {
+        // 결석·기타에서 부를 고르면 그 부로 출석 처리한다.
+        await setStatus(entry.student.id, "present", { classSession: mark });
+        notify(`${name} 학생이 ${mark}부로 출석 처리되었습니다.`);
+      }
     } catch {
-      notify("수업 부를 저장하지 못했습니다. 다시 시도해주세요.", "error");
+      notify("출석 상태를 저장하지 못했습니다. 다시 시도해주세요.", "error");
+    }
+  }
+
+  async function handleNoteSave(entry: AttendanceEntry, note: string | null) {
+    if (entry.status !== "absent" && entry.status !== "other") return;
+    try {
+      await setStatus(entry.student.id, entry.status, { note });
+      notify(note ? `${entry.student.name} 학생의 메모를 저장했습니다.` : `${entry.student.name} 학생의 메모를 비웠습니다.`);
+    } catch (error) {
+      notify("메모를 저장하지 못했습니다. 다시 시도해주세요.", "error");
+      throw error;
     }
   }
 
@@ -77,7 +101,9 @@ export function AttendanceView() {
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400" />다른 요일 수업</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-400" />휴관</span>
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-rose-400" />휴일(주말·공휴일)</span>
-        <span className="sm:ml-auto">이름을 다시 누르면 출석이 해제됩니다. 이름 옆에서 수업 부를 바꿀 수 있어요.</span>
+        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400" />결석</span>
+        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-violet-400" />기타</span>
+        <span className="sm:ml-auto">이름을 다시 누르면 출석이 해제됩니다. 이름 옆에서 수업 부·결석·기타를 바꿀 수 있어요.</span>
       </div>
       <p className="text-xs leading-relaxed text-slate-500">수업 시작 10분 전부터 자동 지정됩니다. 시간 공백이나 과거 날짜의 출석은 부를 직접 선택해주세요.</p>
 
@@ -128,7 +154,7 @@ export function AttendanceView() {
               ? "휴일에는 수업 대상이 없어 체크 전·결석을 집계하지 않습니다."
               : summary.historical
               ? "과거 날짜는 저장된 출결 기록을 표시합니다. 당시 수업 대상과 출석률은 계산하지 않습니다."
-              : `전체 출석 ${summary.presentCount}명 · 대상 중 결석 ${summary.absentCount}명. 휴관 학생과 다른 요일 학생은 수업 대상에 포함되지 않습니다.`}
+              : `전체 출석 ${summary.presentCount}명 · 대상 중 결석 ${summary.absentCount}명 · 기타 ${summary.otherCount}명. 휴관 학생과 다른 요일 학생은 수업 대상에 포함되지 않습니다. 체크하지 않은 수업 대상은 다음 날 자동으로 결석 처리됩니다.`}
           </p>
         </>
       )}
@@ -158,7 +184,7 @@ export function AttendanceView() {
             // 과거 날짜도 현재 출석요일 기준으로 칸 색을 구분한다(통계에는 반영하지 않음).
             const scheduleState = getScheduleState(entry.student, selectedDate);
             return (
-              <AttendanceRow key={entry.student.id} entry={entry} onToggle={handleToggle} onClassSessionChange={handleClassSessionChange}
+              <AttendanceRow key={entry.student.id} entry={entry} onToggle={handleToggle} onClassSessionChange={handleClassSessionChange} onEditNote={setNoteEntry}
                 scheduleState={scheduleState}
                 attendanceNote={scheduleState === "on_leave" ? (summary.historical ? "현재 휴관 중" : "휴관 중 · 출석 가능")
                   : scheduleState === "off_day" ? (isAttending(entry.status) ? "추가 출석" : "다른 요일 수업")
@@ -168,6 +194,8 @@ export function AttendanceView() {
           })}
         </div>
       )}
+
+      <AttendanceNoteModal entry={noteEntry} onClose={() => setNoteEntry(null)} onSave={handleNoteSave} />
     </div>
   );
 }

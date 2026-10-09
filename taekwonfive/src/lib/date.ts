@@ -107,6 +107,13 @@ export function getMonthCalendarDates(monthString: string): {
   };
 }
 
+/** Moves a "YYYY-MM-DD" date by the given number of days. */
+export function shiftDate(dateString: string, days: number): string {
+  const date = parseCalendarDate(dateString);
+  date.setUTCDate(date.getUTCDate() + days);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
 /** Whether a value is a real Korea-calendar date in the form "YYYY-MM-DD". */
 export function isCalendarDateString(value: string): boolean {
   try {

@@ -110,6 +110,15 @@ try {
   const absent = await service.upsertAttendance("student-1", date, "absent");
   assert.equal(absent.classSession, null);
   assert.equal(absent.checkedAt, null);
+  const other = await service.upsertAttendance("student-1", date, "other", { note: " 상담 " });
+  assert.equal(row.status, "absent", "기타 is stored within the existing status constraint");
+  assert.equal(other.status, "other");
+  assert.equal(other.note, "상담");
+  assert.equal((await service.upsertAttendance("student-1", date, "other")).note, null);
+  assert.equal((await service.upsertAttendance("student-1", date, "absent", { note: "감기" })).note, "감기");
+  const backToPresent = await service.upsertAttendance("student-1", date, "present", { classSession: 4 });
+  assert.equal(backToPresent.classSession, 4);
+  assert.equal(backToPresent.note, null);
 } finally { globalThis.Date = RealDate; }
 
 const { AttendanceRow } = load("src/components/attendance/attendance-row.tsx");
@@ -120,7 +129,11 @@ const render = (overrides) => renderToStaticMarkup(createElement(AttendanceRow, 
 const html = render({});
 assert.match(html, /value="2" selected="">2부/);
 assert.ok(html.indexOf("</button>") < html.indexOf("<select"), "Selector must be outside attendance button");
-assert.equal((html.match(/<option /g) || []).length, 7);
+assert.equal((html.match(/<option /g) || []).length, 9);
+assert.ok(html.indexOf(">6부<") < html.indexOf(">결석<") && html.indexOf(">결석<") < html.indexOf(">기타<"), "결석·기타 follow 6부");
+assert.match(render({ status: "absent", classSession: null }), /value="absent" selected="">결석/);
+assert.match(render({ status: "other", classSession: null }), /value="other" selected="">기타/);
+assert.ok(!render({ status: "absent", classSession: null }).includes(">부 선택<"));
 assert.match(render({ classSession: null }), /value="" selected="">부 선택/);
 assert.ok(!render({ status: "not_checked", classSession: null }).includes("<select"));
 assert.equal((render({ pending: true }).match(/disabled=""/g) || []).length, 2);
